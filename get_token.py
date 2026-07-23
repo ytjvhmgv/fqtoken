@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parent
@@ -59,7 +60,7 @@ def decode_jwt_payload(token: str):
 
 
 def get_yidun_tokens(home_url: str, product_id: str) -> dict:
-    """在站点页面内调用易盾 SDK，拿到 fingerprint + protector token。"""
+    """?????????? SDK??? fingerprint + protector token?"""
     js = """
     async () => {
       const out = {};
@@ -71,6 +72,16 @@ def get_yidun_tokens(home_url: str, product_id: str) -> dict:
           localStorage.setItem('fingerprintVal', r.visitorId);
         }
       } catch (e) { out.fp_err = String(e); }
+
+      // FingerprintJS ? GitHub Actions ?????????? 32 hex ?? imei
+      if (!out.fingerprint) {
+        try {
+          const bytes = new Uint8Array(16);
+          crypto.getRandomValues(bytes);
+          out.fingerprint = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+          localStorage.setItem('fingerprintVal', out.fingerprint);
+        } catch (e) { out.fp_fallback_err = String(e); }
+      }
 
       try {
         const capRes = await fetch('https://openim-php-api.qaek4a2wjx6bt.cc/v220/captcha', {
@@ -104,23 +115,67 @@ def get_yidun_tokens(home_url: str, product_id: str) -> dict:
       return out;
     }
     """
+
+    # ????????????GitHub Actions ?????? window????????
+    sdk_urls = [
+        "https://resource-rr.opajann.cn/web_js/public/fp.min.js",
+        "https://resource-rr.opajann.cn/web_js/public/YiDunProtector-Web-2.1.1.js",
+    ]
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+            ],
+        )
         page = browser.new_page(
+            viewport={"width": 1365, "height": 900},
+            locale="zh-CN",
             user_agent=(
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                 "AppleWebKit/537.36 (KHTML, like Gecko) "
                 "Chrome/120.0.0.0 Safari/537.36"
-            )
+            ),
         )
-        print(f"[*] 打开页面加载易盾 SDK: {home_url}", flush=True)
+        print(f"[*] ???????? SDK: {home_url}", flush=True)
         page.goto(home_url, wait_until="domcontentloaded", timeout=60000)
-        page.wait_for_function("typeof createNEGuardian === 'function'", timeout=30000)
+        page.wait_for_timeout(3000)
+
+        try:
+            page.wait_for_function("typeof createNEGuardian === 'function'", timeout=15000)
+        except PlaywrightTimeoutError:
+            print("[!] ?????? createNEGuardian????????? SDK...", flush=True)
+            for url in sdk_urls:
+                try:
+                    print(f"[*] inject {url}", flush=True)
+                    page.add_script_tag(url=url)
+                    page.wait_for_timeout(1200)
+                except Exception as e:
+                    print(f"[!] inject failed: {url} -> {e}", flush=True)
+            try:
+                page.wait_for_function("typeof createNEGuardian === 'function'", timeout=20000)
+            except PlaywrightTimeoutError as e:
+                debug = page.evaluate(
+                    """() => ({
+                      href: location.href,
+                      title: document.title,
+                      readyState: document.readyState,
+                      hasGuardian: typeof createNEGuardian,
+                      hasFP: typeof FingerprintJS,
+                      scripts: Array.from(document.scripts).map(s => s.src).filter(Boolean).slice(0, 30),
+                      text: (document.body && document.body.innerText || '').slice(0, 300)
+                    })"""
+                )
+                browser.close()
+                raise RuntimeError("?? SDK ????: " + json.dumps(debug, ensure_ascii=False)) from e
+
         page.wait_for_timeout(800)
         data = page.evaluate(js)
         browser.close()
     return data
-
 
 def login_pass(cfg: dict, yidun: dict) -> dict:
     base = cfg["base_im_api"].rstrip("/")
