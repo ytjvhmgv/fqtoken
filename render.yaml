@@ -1,0 +1,15 @@
+# Render Cron Job（可选）
+# Dashboard 创建 Cron Job 也可，命令见 README
+services:
+  - type: cron
+    name: fqzb-token-refresh
+    runtime: python
+    plan: starter
+    schedule: "0 */12 * * *"
+    buildCommand: pip install -r requirements.txt && playwright install --with-deps chromium
+    startCommand: python get_token.py
+    envVars:
+      - key: FQZB_ACCOUNT
+        sync: false
+      - key: FQZB_PASSWORD
+        sync: false

@@ -1,0 +1,8 @@
+[*] 打开页面加载易盾 SDK: https://www.fqzb161.com/home
+[*] fingerprint=216649f378fb0025fb310042d5eae522
+[*] yidun_token=xjN1SaStIVBFZwFQQEaD6pSI...
+[*] POST https://openim-php-api.qaek4a2wjx6bt.cc/v220/user/login/pass
+[*] login code=200 message=登录成功
+[OK] C:\Users\Lenovo\Desktop\code\fqzb-token\token.json
+[OK] C:\Users\Lenovo\Desktop\code\fqzb-token\token.txt
+[OK] token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvYXBpLm9wZW5...
