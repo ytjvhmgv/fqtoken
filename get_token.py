@@ -21,7 +21,7 @@ TOKEN_JSON = ROOT / "token.json"
 TOKEN_TXT = ROOT / "token.txt"
 
 DEFAULTS = {
-    "home_url": "https://www.fqzb161.com/home",
+    "home_url": "https://www.fqzb159.com/home",
     "base_im_api": "https://openim-php-api.qaek4a2wjx6bt.cc",
     "version": "1.9.7",
     "api_version": "8",
@@ -209,8 +209,8 @@ def login_pass(cfg: dict, yidun: dict) -> dict:
         "device2": "3",
         "imei": fingerprint,
         "dun-imei": yidun_token,
-        "Origin": "https://www.fqzb161.com",
-        "Referer": "https://www.fqzb161.com/",
+        "Origin": "https://www.fqzb159.com",
+        "Referer": "https://www.fqzb159.com/",
     }
 
     print(f"[*] POST {url}", flush=True)
